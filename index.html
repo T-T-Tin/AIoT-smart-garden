@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tra Cứu Thông Số Vườn</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f7f6; padding: 20px; text-align: center; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input[type="text"] { width: 90%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { background-color: #04AA6D; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; }
+        button:hover { background-color: #038a59; }
+        .result-box { margin-top: 20px; text-align: left; background: #eef7f2; padding: 15px; border-radius: 5px; display: none; border-left: 5px solid #04AA6D; }
+        .loader { display: none; margin-top: 15px; font-style: italic; color: #666; }
+        h3 { margin-top: 0; color: #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Trợ Lý Trồng Cây AI 🌿</h2>
+    <input type="text" id="plantName" placeholder="Nhập tên cây (VD: Dưa lưới, Xà lách...)">
+    <button onclick="askAI()">Tra cứu thông số</button>
+    <div id="loading" class="loader">AI đang phân tích dữ liệu...</div>
+
+    <div id="result" class="result-box">
+        <h3>Kết quả cho: <span id="resName" style="color: #04AA6D;"></span></h3>
+        <p>🌡️ <b>Nhiệt độ:</b> <span id="resTemp"></span> °C</p>
+        <p>☁️ <b>Độ ẩm KK:</b> <span id="resAirHumi"></span> %</p>
+        <p>💧 <b>Độ ẩm Đất:</b> <span id="resSoilHumi"></span> %</p>
+    </div>
+</div>
+
+<script>
+    // BẠN ĐIỀN API KEY CỦA GROQ VÀO ĐÂY (Bắt đầu bằng gsk_...)
+    const API_KEY = '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'; 
+
+    async function askAI() {
+        const plant = document.getElementById('plantName').value.trim();
+        if (!plant) {
+            alert("Vui lòng nhập tên cây!");
+            return;
+        }
+
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+
+        const prompt = `Bạn là chuyên gia nông nghiệp. Hãy cho tôi biết khoảng ngưỡng an toàn để trồng cây "${plant}". 
+        Chỉ trả về duy nhất 1 chuỗi JSON theo đúng định dạng sau, tuyệt đối không có markdown (không dùng \`\`\`json), không giải thích thêm: 
+        {"temp_min": 20, "temp_max": 25, "humi_min": 60, "humi_max": 80, "soil_min": 60, "soil_max": 80}`;
+
+        // Địa chỉ máy chủ của Groq (Dùng chuẩn OpenAI)
+        const url = 'https://api.groq.com/openai/v1/chat/completions';
+        
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({
+                    model: "openai/gpt-oss-20b", 
+                    messages: [
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.1 // Để AI trả lời chính xác số liệu, không sáng tạo lung tung
+                })
+            });
+
+            const data = await response.json();
+            
+            // Xử lý lỗi nếu sai Key hoặc lỗi server
+            if (!response.ok) {
+                console.error("Lỗi từ server Groq:", data);
+                alert(`Lỗi API: ${data.error?.message || response.statusText}`);
+                document.getElementById('loading').style.display = 'none';
+                return; 
+            }
+
+            // Bóc tách dữ liệu JSON từ Groq
+            let aiText = data.choices[0].message.content.trim();
+            aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const resultObj = JSON.parse(aiText);
+
+            // Hiển thị ra màn hình
+            document.getElementById('resName').innerText = plant.toUpperCase();
+            document.getElementById('resTemp').innerText = resultObj.temp_min + " - " + resultObj.temp_max;
+            document.getElementById('resAirHumi').innerText = resultObj.humi_min + " - " + resultObj.humi_max;
+            document.getElementById('resSoilHumi').innerText = resultObj.soil_min + " - " + resultObj.soil_max;
+
+            document.getElementById('result').style.display = 'block';
+        } catch (error) {
+            alert("Đã xảy ra lỗi khi bóc tách dữ liệu. Vui lòng thử lại!");
+            console.error(error);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>
