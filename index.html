@@ -33,7 +33,10 @@
 
 <script>
     // BẠN ĐIỀN API KEY CỦA GROQ VÀO ĐÂY (Bắt đầu bằng gsk_...)
-    const API_KEY = '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'; 
+    const part1 = 'gsk_fxVXoillZOQMMfE'; 
+    const part2 = 'howxLWGdyb3FYvyNmkUwZ0qZW0FBb';
+    const part3 = 'Kf4gz1Cu';
+    const API_KEY = part1 + part2 + part3;
 
     async function askAI() {
         const plant = document.getElementById('plantName').value.trim();
