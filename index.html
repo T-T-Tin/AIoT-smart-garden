@@ -30,7 +30,11 @@
         <p>💧 <b>Độ ẩm Đất:</b> <span id="resSoilHumi"></span> %</p>
     </div>
 </div>
-
+<div style="margin-top: 20px; padding: 15px; background-color: #e8f5e9; border-radius: 8px; border-left: 5px solid #4caf50;">
+    <h4>💡 Thông tin sinh trưởng:</h4>
+    <p id="resDescription" style="font-size: 16px; line-height: 1.6; color: #333;"></p>
+</div>
+    
 <script>
     // BẠN ĐIỀN API KEY CỦA GROQ VÀO ĐÂY (Bắt đầu bằng gsk_...)
     const part1 = 'gsk_fxVXoillZOQMMfE'; 
@@ -38,7 +42,7 @@
     const part3 = 'Kf4gz1Cu';
     const API_KEY = part1 + part2 + part3;
 
-    async function askAI() {
+async function askAI() {
         const plant = document.getElementById('plantName').value.trim();
         if (!plant) {
             alert("Vui lòng nhập tên cây!");
@@ -48,11 +52,11 @@
         document.getElementById('loading').style.display = 'block';
         document.getElementById('result').style.display = 'none';
 
-        const prompt = `Bạn là chuyên gia nông nghiệp. Hãy cho tôi biết khoảng ngưỡng an toàn để trồng cây "${plant}". 
-        Chỉ trả về duy nhất 1 chuỗi JSON theo đúng định dạng sau, tuyệt đối không có markdown (không dùng \`\`\`json), không giải thích thêm: 
-        {"temp_min": 20, "temp_max": 25, "humi_min": 60, "humi_max": 80, "soil_min": 60, "soil_max": 80}`;
+        // 1. CẬP NHẬT LẠI CÂU LỆNH PROMPT ĐỂ ÉP AI VIẾT THÊM DESCRIPTION
+        const prompt = `Bạn là chuyên gia nông nghiệp. Hãy cung cấp ngưỡng an toàn và tóm tắt điều kiện sống cho cây "${plant}". 
+        Chỉ trả về duy nhất 1 chuỗi JSON hợp lệ, tuyệt đối không có markdown (không dùng \`\`\`json), không giải thích thêm: 
+        {"temp_min": 20, "temp_max": 25, "humi_min": 60, "humi_max": 80, "soil_min": 60, "soil_max": 80, "description": "Viết khoảng 2-3 câu ngắn gọn giới thiệu về đặc tính, nhu cầu ánh sáng và tưới tiêu của loại cây này."}`;
 
-        // Địa chỉ máy chủ của Groq (Dùng chuẩn OpenAI)
         const url = 'https://api.groq.com/openai/v1/chat/completions';
         
         try {
@@ -63,17 +67,16 @@
                     'Content-Type': 'application/json' 
                 },
                 body: JSON.stringify({
-                    model: "openai/gpt-oss-20b", 
+                    model: "openai/gpt-oss-20b", // Model mới nhất bạn đã cập nhật hôm qua
                     messages: [
                         { role: "user", content: prompt }
                     ],
-                    temperature: 0.1 // Để AI trả lời chính xác số liệu, không sáng tạo lung tung
+                    temperature: 0.2 // Tăng nhẹ một chút để AI hành văn tự nhiên hơn
                 })
             });
 
             const data = await response.json();
             
-            // Xử lý lỗi nếu sai Key hoặc lỗi server
             if (!response.ok) {
                 console.error("Lỗi từ server Groq:", data);
                 alert(`Lỗi API: ${data.error?.message || response.statusText}`);
@@ -81,16 +84,18 @@
                 return; 
             }
 
-            // Bóc tách dữ liệu JSON từ Groq
             let aiText = data.choices[0].message.content.trim();
             aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
             const resultObj = JSON.parse(aiText);
 
-            // Hiển thị ra màn hình
+            // 2. XUẤT DỮ LIỆU RA MÀN HÌNH NHƯ CŨ
             document.getElementById('resName').innerText = plant.toUpperCase();
             document.getElementById('resTemp').innerText = resultObj.temp_min + " - " + resultObj.temp_max;
             document.getElementById('resAirHumi').innerText = resultObj.humi_min + " - " + resultObj.humi_max;
             document.getElementById('resSoilHumi').innerText = resultObj.soil_min + " - " + resultObj.soil_max;
+            
+            // 3. XUẤT THÊM ĐOẠN VĂN GIỚI THIỆU VÀO THẺ P VỪA TẠO
+            document.getElementById('resDescription').innerText = resultObj.description;
 
             document.getElementById('result').style.display = 'block';
         } catch (error) {
